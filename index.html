@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+</head>
+    <title>Project</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Calisto+MT:wght@400&display=swap');
+
+        body,
+        input,
+        button {
+            margin: 0;
+            padding: 0;
+            font-family: 'Calisto MT', serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-image: url('https://assets.onecompiler.app/42t2bd9qp/42t559bkt/ooopopo.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        h1 {
+            color: #ff6f91;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="email"] {
+            width: 80%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #ff6f91;
+            border-radius: 25px;
+            box-sizing: border-box;
+            font-size: 1.1em;
+            transition: 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus {
+            border-color: #fcb69f;
+            outline: none;
+            box-shadow: 0 0 10px rgba(255, 111, 145, 0.5);
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            background-color: #ff6f91;
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin: 10px 5px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #fcb69f;
+            box-shadow: 0 4px 15px rgba(255, 111, 145, 0.4);
+        }
+
+        .circle1,
+        .circle2 {
+            position: absolute;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff9a9e 0%, #ff6f91 100%);
+            z-index: -1;
+        }
+
+        .circle1 {
+            width: 200px;
+            height: 200px;
+            top: -50px;
+            left: -50px;
+        }
+
+        .circle2 {
+            width: 150px;
+            height: 150px;
+            bottom: -50px;
+            right: -50px;
+        }
+    </style>
+    
+
+<body>
+    <div class="circle1"></div>
+    <div class="circle2"></div>
+    <div class="container">
+        <h1>Sign In</h1>
+        <form id="signInForm">
+            <input type="text" id="name" placeholder="Name" required>
+            <input type="text" id="studentNumber" placeholder="Student Number" required>
+            <input type="email" id="email" placeholder="Email Address" required>
+            <button type="submit">Sign In</button>
+        </form>
+        <button id="downloadBtn" aria-label="Download student data as XLSX">XLSX</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+       
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdJ53jFp8AXSBtEdvVuCEfkIOCljpaMDM",
+            authDomain: "project-90889.firebaseapp.com",
+            databaseURL: "https://project-90889-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "project-90889",
+            storageBucket: "project-90889.appspot.com",
+            messagingSenderId: "204248515405",
+            appId: "1:204248515405:web:9b8c9bd949cc1faac9ed04",
+            measurementId: "G-2WM7W5SWMB"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        document.getElementById('signInForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const studentNumber = document.getElementById('studentNumber').value;
+            const email = document.getElementById('email').value;
+
+            if (name && studentNumber && email) {
+                set(ref(database, 'students/' + studentNumber), {
+                    name: name,
+                    studentNumber: studentNumber,
+                    email: email
+                }).then(() => {
+                    alert('Signed in successfully!');
+                    document.getElementById('signInForm').reset();
+                }).catch(error => {
+                    console.error("Error signing in: ", error);
+                    alert('Error signing in. Please try again.');
+                });
+            }
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            get(child(ref(database), 'students')).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const students = snapshot.val();
+                    const data = [];
+
+                    for (const key in students) {
+                        if (students.hasOwnProperty(key)) {
+                            data.push({
+                                "Student Number": students[key].studentNumber,
+                                "Name": students[key].name,
+                                "Email": students[key].email
+                            });
+                        }
+                    }
+
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Students");
+                    XLSX.writeFile(wb, "students_data.xlsx");
+                } else {
+                    console.error("No data available to download");
+                    alert('No data available to download.');
+                }
+            }).catch((error) => {
+                console.error("Error fetching data: ", error);
+                alert('Error fetching data. Please try again.');
+            });
+        });
+    </script>
+</body>
+
+</html>
